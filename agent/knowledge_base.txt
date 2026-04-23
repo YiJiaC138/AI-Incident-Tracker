@@ -1,0 +1,26 @@
+# IT INCIDENT ROUTING POLICY KNOWLEDGE BASE
+
+## GENERAL GUIDELINES
+- All tickets regarding user access or passwords must go to "Identity & Access Management".
+- All tickets reporting a blue screen of death or broken monitors go to "Hardware Field Services".
+- All network or VPN drop issues go to "Network Operations Center".
+- For internal enterprise applications like SAP, Workday, or Payroll, assign to "Enterprise App Support".
+- If the ticket is submitted by an Executive (CEO, VP, C-level) and they are unable to work, the priority must ALWAYS be "critical".
+- Any security concern (e.g. phishing email, virus, suspicious activity) must be immediately routed to "Cybersecurity Incident Response" with priority "high".
+
+## HARDWARE ISSUES
+- Mouse/Keyboard issues -> priority "low" -> assign to "Hardware Field Services".
+- Desktop/Laptop not booting -> priority "medium" -> assign to "Hardware Field Services".
+- Printer out of ink/paper -> priority "low" -> assign to "Facilities & Operations".
+
+## SOFTWARE ISSUES
+- Commercial software (Microsoft Office, Adobe) -> "Desktop App Support".
+- Enterprise Systems (Payroll, HR, SAP) -> "Enterprise App Support".
+- Password resets -> priority "medium" (or high if executive) -> "Identity & Access Management".
+
+## NETWORK ISSUES
+- Cannot connect to WiFi -> "Network Operations Center".
+- VPN client not connecting from remote -> "Remote Access Support".
+
+## ESCALATION POLICIES
+- If an entire department or critical system (e.g. Payroll database) is down, set priority to "critical" and assign to the respective L3 Team (e.g. "L3 Database Engineering").

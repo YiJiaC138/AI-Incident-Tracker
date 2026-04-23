@@ -1,0 +1,62 @@
+[
+  {
+    "id": "TC-AI-01",
+    "title": "VPN down for all staff",
+    "description": "Nobody in our office can connect to the VPN client from remote. It keeps dropping.",
+    "department": "Engineering",
+    "expected": {
+      "category": "network",
+      "assigned_team": "Network Operations Center"
+    }
+  },
+  {
+    "id": "TC-AI-02",
+    "title": "Payroll inaccessible",
+    "description": "I cannot access the payroll system to process this month's salary.",
+    "department": "Finance",
+    "expected": {
+      "category": "software",
+      "assigned_team": "Enterprise App Support"
+    }
+  },
+  {
+    "id": "TC-AI-03",
+    "title": "Need password reset",
+    "description": "I forgot my active directory password and need it reset.",
+    "department": "HR",
+    "expected": {
+      "priority": "medium",
+      "assigned_team": "Identity & Access Management"
+    }
+  },
+  {
+    "id": "TC-AI-04",
+    "title": "Blue screen of death",
+    "description": "My laptop just crashed and shows a blue screen. It won't boot up anymore.",
+    "department": "Sales",
+    "expected": {
+      "category": "hardware",
+      "priority": "medium",
+      "assigned_team": "Hardware Field Services"
+    }
+  },
+  {
+    "id": "TC-AI-05",
+    "title": "Executive cannot login",
+    "description": "The CEO is unable to login to their computer before the board meeting.",
+    "department": "Executives",
+    "expected": {
+      "priority": "critical"
+    }
+  },
+  {
+    "id": "TC-AI-06",
+    "title": "Phishing email received",
+    "description": "I received an email asking for my password from a suspicious sender.",
+    "department": "General Staff",
+    "expected": {
+      "priority": "high",
+      "assigned_team": "Cybersecurity Incident Response"
+    }
+  }
+]
