@@ -24,3 +24,4 @@ dist-ssr
 *.sw?
 # env for agent
 agent/.env
+agent/__pycache__
