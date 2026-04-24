@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { getTickets, triggerEscalation, closeTicket, clearAllTickets } from '../api'
-import { Clock, AlertTriangle, CheckCircle2, ArrowUpRight, RefreshCw, Trash2, XCircle, X } from 'lucide-react'
+import { getTickets, triggerEscalation, closeTicket, clearAllTickets, analyzeOverview } from '../api'
+import { Clock, AlertTriangle, CheckCircle2, ArrowUpRight, RefreshCw, Trash2, XCircle, X, Sparkles, BarChart3 } from 'lucide-react'
 
 type Ticket = {
   id: number
@@ -13,6 +13,7 @@ type Ticket = {
   assigned_team: string
   status: string
   created_at: string
+  related_tickets?: { id: number, title: string, status: string }[]
 }
 
 export function Dashboard() {
@@ -20,6 +21,9 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [escalating, setEscalating] = useState(false)
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null)
+  
+  const [analysis, setAnalysis] = useState<string | null>(null)
+  const [analyzing, setAnalyzing] = useState(false)
 
   const selectedTicket = tickets.find(t => t.id === selectedTicketId)
 
@@ -72,6 +76,32 @@ export function Dashboard() {
     }
   }
 
+  const handleAnalyze = async () => {
+    setAnalyzing(true)
+    try {
+      const data = await analyzeOverview()
+      setAnalysis(data.analysis)
+    } catch (error) {
+      console.error("Error analyzing overview:", error)
+      setAnalysis("Failed to generate AI analysis.")
+    } finally {
+      setAnalyzing(false)
+    }
+  }
+
+  // Calculate Stats
+  const totalTickets = tickets.length;
+  const closedCount = tickets.filter(t => t.status === 'Closed').length;
+  const activeCount = totalTickets - closedCount;
+  
+  const categoryStats = tickets.reduce((acc, ticket) => {
+    acc[ticket.category] = (acc[ticket.category] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  
+  const activePercentage = totalTickets > 0 ? Math.round((activeCount / totalTickets) * 100) : 0;
+  const closedPercentage = totalTickets > 0 ? Math.round((closedCount / totalTickets) * 100) : 0;
+
   const getPriorityColor = (priority: string) => {
     const p = priority?.toLowerCase() || ''
     if (p.includes('high')) return 'bg-red-100 text-red-700 border-red-200'
@@ -119,6 +149,23 @@ export function Dashboard() {
     });
   };
 
+  const sortedTickets = [...tickets].sort((a, b) => {
+    const getStatusWeight = (status: string) => {
+      if (status === 'Escalated') return 0;
+      if (status === 'Closed' || status === 'Resolved') return 2;
+      return 1;
+    };
+    
+    const weightA = getStatusWeight(a.status);
+    const weightB = getStatusWeight(b.status);
+    
+    if (weightA !== weightB) {
+      return weightA - weightB;
+    }
+    
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
   return (
     <div className="w-full mt-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
@@ -152,6 +199,96 @@ export function Dashboard() {
         </div>
       </div>
 
+      {/* Overview Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Categories Table */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col">
+          <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-blue-500" />
+            Tickets by Category
+          </h3>
+          {Object.keys(categoryStats).length === 0 ? (
+             <p className="text-sm text-slate-500 flex-1 flex items-center justify-center">No category data available.</p>
+          ) : (
+            <div className="overflow-hidden border border-slate-100 rounded-lg">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-slate-50 border-b border-slate-100">
+                  <tr>
+                    <th className="px-4 py-2 font-medium text-slate-600">Category</th>
+                    <th className="px-4 py-2 font-medium text-slate-600 text-right">Count</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {Object.entries(categoryStats).sort((a, b) => b[1] - a[1]).map(([cat, count]) => (
+                    <tr key={cat} className="hover:bg-slate-50/50">
+                      <td className="px-4 py-2 text-slate-700 capitalize">{cat}</td>
+                      <td className="px-4 py-2 text-slate-700 text-right font-medium">{count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Status Bar Chart & AI Analysis */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 lg:col-span-2 flex flex-col">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-slate-900">Database Status Overview</h3>
+            <button
+              onClick={handleAnalyze}
+              disabled={analyzing || totalTickets === 0}
+              className="flex items-center gap-2 bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 px-3 py-1.5 rounded-md font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {analyzing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              Analyze with AI
+            </button>
+          </div>
+
+          {/* Custom Bar Chart */}
+          <div className="mb-6">
+            <div className="flex justify-between text-sm mb-2">
+              <span className="font-medium text-slate-700">Active ({activeCount})</span>
+              <span className="font-medium text-slate-700">Closed ({closedCount})</span>
+            </div>
+            <div className="h-4 flex rounded-full overflow-hidden bg-slate-100">
+              {totalTickets > 0 ? (
+                <>
+                  <div 
+                    className="bg-blue-500 h-full transition-all duration-500" 
+                    style={{ width: `${activePercentage}%` }}
+                    title={`Active: ${activePercentage}%`}
+                  ></div>
+                  <div 
+                    className="bg-green-500 h-full transition-all duration-500" 
+                    style={{ width: `${closedPercentage}%` }}
+                    title={`Closed: ${closedPercentage}%`}
+                  ></div>
+                </>
+              ) : (
+                <div className="w-full h-full bg-slate-200" title="No tickets"></div>
+              )}
+            </div>
+          </div>
+
+          {/* AI Analysis Result */}
+          <div className="flex-1 bg-slate-50 border border-slate-100 rounded-lg p-4 flex flex-col">
+            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5" /> AI Executive Summary
+            </h4>
+            {analysis ? (
+              <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
+                {analysis}
+              </div>
+            ) : (
+              <div className="text-sm text-slate-500 flex-1 flex items-center justify-center min-h-[80px] italic">
+                Click "Analyze with AI" to generate a database overview.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         {loading ? (
           <div className="p-12 flex justify-center">
@@ -179,7 +316,7 @@ export function Dashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {tickets.map(ticket => (
+                {sortedTickets.map(ticket => (
                   <tr key={ticket.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="p-4 pl-6">
                       <div className="flex flex-col">
@@ -306,6 +443,29 @@ export function Dashboard() {
                     {renderWithTicketLinks(selectedTicket.description)}
                   </div>
                 </div>
+
+                {selectedTicket.related_tickets && selectedTicket.related_tickets.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-slate-900 mb-2">Similar / Related Tickets</h4>
+                    <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                      <ul className="divide-y divide-slate-100">
+                        {selectedTicket.related_tickets.map((related) => (
+                          <li key={related.id} className="p-3 hover:bg-slate-50 flex items-center justify-between">
+                            <button
+                              onClick={() => setSelectedTicketId(related.id)}
+                              className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline flex-1 text-left"
+                            >
+                              #{related.id} - {related.title}
+                            </button>
+                            <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                              {related.status}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             

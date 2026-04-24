@@ -28,3 +28,8 @@ export const clearAllTickets = async () => {
   const response = await api.delete('/tickets');
   return response.data;
 };
+
+export const analyzeOverview = async () => {
+  const response = await api.post('/analyze-overview');
+  return response.data;
+};

@@ -1,4 +1,6 @@
 import json
+import sqlite3
+import os
 
 def check_server_status(server_name: str) -> str:
     """
@@ -32,16 +34,48 @@ def query_past_tickets(keyword: str) -> str:
     """
     Searches the ticket database for recent similar incidents.
     """
-    keyword = keyword.lower()
-    if "payroll" in keyword:
+    search_keyword = f"%{keyword.lower()}%"
+    db_path = "tickets.db"
+    
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT id, title, status, assigned_team 
+            FROM tickets 
+            WHERE lower(title) LIKE ? 
+               OR lower(description) LIKE ? 
+               OR lower(summary) LIKE ?
+            ORDER BY created_at DESC
+            LIMIT 5
+        ''', (search_keyword, search_keyword, search_keyword))
+        
+        results = cursor.fetchall()
+        conn.close()
+        
+        if not results:
+            return json.dumps({
+                "related_tickets": 0,
+                "status": "No similar recent tickets found.",
+                "tickets": []
+            })
+            
+        formatted_tickets = [
+            {"id": row[0], "title": row[1], "status": row[2], "assigned_team": row[3]} 
+            for row in results
+        ]
+            
         return json.dumps({
-            "related_tickets": 3,
-            "status": "A known active major incident is currently being investigated by the Database Engineering team."
+            "related_tickets": len(results),
+            "status": f"Found {len(results)} related tickets.",
+            "tickets": formatted_tickets
         })
-    return json.dumps({
-        "related_tickets": 0,
-        "status": "No similar recent tickets found."
-    })
+        
+    except sqlite3.Error as e:
+        return json.dumps({
+            "error": f"Database error: {str(e)}"
+        })
 
 # Define the tools schema for the Z.AI / OpenAI API
 AVAILABLE_TOOLS_SCHEMA = [

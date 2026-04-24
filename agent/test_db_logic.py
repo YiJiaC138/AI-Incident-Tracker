@@ -20,7 +20,8 @@ class TestDBLogic(unittest.TestCase):
                 priority TEXT,
                 assigned_team TEXT,
                 status TEXT,
-                created_at TIMESTAMP
+                created_at TIMESTAMP,
+                related_tickets TEXT
             )
         ''')
         self.conn.commit()

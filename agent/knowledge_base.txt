@@ -20,7 +20,7 @@
 
 ## NETWORK ISSUES
 - Cannot connect to WiFi -> "Network Operations Center".
-- VPN client not connecting from remote -> "Remote Access Support".
+- VPN client not connecting from remote -> "Network Operations Center".
 
 ## ESCALATION POLICIES
-- If an entire department or critical system (e.g. Payroll database) is down, set priority to "critical" and assign to the respective L3 Team (e.g. "L3 Database Engineering").
+- If an entire department or critical system is down, set priority to "critical" but keep the original team assignment unless specified otherwise.

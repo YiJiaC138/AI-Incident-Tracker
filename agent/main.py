@@ -41,6 +41,10 @@ def init_db():
             created_at TIMESTAMP
         )
     ''')
+    try:
+        cursor.execute('ALTER TABLE tickets ADD COLUMN related_tickets TEXT')
+    except sqlite3.OperationalError:
+        pass # Column already exists or we are using a fresh DB where we'll just ignore for now
     conn.commit()
     conn.close()
 
@@ -156,22 +160,34 @@ Regardless of whether you use tools or not, your final response MUST be a valid 
 @app.post("/api/incidents")
 async def create_incident(req: IncidentRequest):
     analysis = analyze_incident(req.title, req.description, req.department)
+    category = analysis.get('category', '')
     
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
+    
+    # Query for related tickets by category
+    cursor.execute('''
+        SELECT id, title, status FROM tickets 
+        WHERE category = ? AND status != 'Closed'
+        ORDER BY created_at DESC LIMIT 5
+    ''', (category,))
+    related_rows = cursor.fetchall()
+    related = [{"id": row[0], "title": row[1], "status": row[2]} for row in related_rows]
+    related_json = json.dumps(related)
+    
     created_at = datetime.utcnow().isoformat()
     status = "Open"
     
     cursor.execute('''
-        INSERT INTO tickets (title, description, reporter_department, summary, category, priority, assigned_team, status, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (req.title, req.description, req.department, analysis.get('summary'), analysis.get('category'), analysis.get('priority'), analysis.get('assigned_team'), status, created_at))
+        INSERT INTO tickets (title, description, reporter_department, summary, category, priority, assigned_team, status, created_at, related_tickets)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (req.title, req.description, req.department, analysis.get('summary'), category, analysis.get('priority'), analysis.get('assigned_team'), status, created_at, related_json))
     
     ticket_id = cursor.lastrowid
     conn.commit()
     conn.close()
     
-    return {"id": ticket_id, "status": "success", "analysis": analysis}
+    return {"id": ticket_id, "status": "success", "analysis": analysis, "related_tickets": related}
 
 @app.get("/api/tickets")
 async def get_tickets():
@@ -179,7 +195,19 @@ async def get_tickets():
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM tickets ORDER BY created_at DESC')
-    tickets = [dict(row) for row in cursor.fetchall()]
+    
+    tickets = []
+    for row in cursor.fetchall():
+        ticket_dict = dict(row)
+        if 'related_tickets' in ticket_dict and ticket_dict['related_tickets']:
+            try:
+                ticket_dict['related_tickets'] = json.loads(ticket_dict['related_tickets'])
+            except json.JSONDecodeError:
+                ticket_dict['related_tickets'] = []
+        else:
+            ticket_dict['related_tickets'] = []
+        tickets.append(ticket_dict)
+        
     conn.close()
     return tickets
 
@@ -239,6 +267,73 @@ async def clear_tickets():
     conn.close()
     
     return {"status": "success", "deleted_count": deleted_count}
+
+@app.post("/api/analyze-overview")
+async def analyze_overview():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    
+    # Get total tickets
+    cursor.execute('SELECT COUNT(*) FROM tickets')
+    total_tickets = cursor.fetchone()[0]
+    
+    # Get category counts
+    cursor.execute('SELECT category, COUNT(*) FROM tickets GROUP BY category')
+    categories = cursor.fetchall()
+    category_stats = {cat: count for cat, count in categories}
+    
+    # Get status counts
+    cursor.execute('SELECT status, COUNT(*) FROM tickets GROUP BY status')
+    statuses = cursor.fetchall()
+    status_stats = {stat: count for stat, count in statuses}
+    
+    # Get stakeholder/department counts
+    cursor.execute('SELECT reporter_department, COUNT(*) FROM tickets GROUP BY reporter_department')
+    departments = cursor.fetchall()
+    department_stats = {dept: count for dept, count in departments}
+    
+    conn.close()
+    
+    if total_tickets == 0:
+        return {"analysis": "The database is currently empty. There are no tickets to analyze."}
+        
+    stats_summary = f"""
+    Total Tickets: {total_tickets}
+    
+    Category Breakdown:
+    {json.dumps(category_stats, indent=2)}
+    
+    Status Breakdown:
+    {json.dumps(status_stats, indent=2)}
+    
+    Stakeholder/Department Breakdown:
+    {json.dumps(department_stats, indent=2)}
+    """
+    
+    system_prompt = """
+    You are an AI IT Operations Manager.
+    Analyze the current state of the ticket database and provide a concise executive summary (2-3 paragraphs max).
+    Highlight any potential bottlenecks, high volume categories, or concerning ratios of open/escalated to closed tickets.
+    You MUST explicitly note the highest type of issues created in the database and which stakeholder (reporter department) makes the most tickets.
+    Return only the executive summary text.
+    """
+    
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": f"Here are the current ticket statistics:\n{stats_summary}"}
+    ]
+    
+    try:
+        response = client.chat.completions.create(
+            model="ilmu-glm-5.1",
+            messages=messages,
+            temperature=0.3
+        )
+        analysis = response.choices[0].message.content
+        return {"analysis": analysis.strip()}
+    except Exception as e:
+        print(f"Error during AI overview analysis: {e}")
+        return {"analysis": "Failed to generate AI analysis due to an internal error."}
 
 if __name__ == "__main__":
     import uvicorn
