@@ -203,6 +203,43 @@ async def trigger_escalation():
     
     return {"status": "success", "escalated_count": escalated_count}
 
+@app.put("/api/tickets/{ticket_id}/close")
+async def close_ticket(ticket_id: int):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        UPDATE tickets 
+        SET status = 'Closed'
+        WHERE id = ?
+    ''', (ticket_id,))
+    
+    if cursor.rowcount == 0:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Ticket not found")
+        
+    conn.commit()
+    conn.close()
+    
+    return {"status": "success", "message": f"Ticket {ticket_id} closed"}
+
+@app.delete("/api/tickets")
+async def clear_tickets():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    
+    cursor.execute('DELETE FROM tickets')
+    
+    deleted_count = cursor.rowcount
+    
+    # Reset auto-increment counter
+    cursor.execute('DELETE FROM sqlite_sequence WHERE name="tickets"')
+    
+    conn.commit()
+    conn.close()
+    
+    return {"status": "success", "deleted_count": deleted_count}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

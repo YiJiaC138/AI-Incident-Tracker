@@ -18,3 +18,13 @@ export const triggerEscalation = async () => {
   const response = await api.post('/escalate');
   return response.data;
 };
+
+export const closeTicket = async (id: number) => {
+  const response = await api.put(`/tickets/${id}/close`);
+  return response.data;
+};
+
+export const clearAllTickets = async () => {
+  const response = await api.delete('/tickets');
+  return response.data;
+};
