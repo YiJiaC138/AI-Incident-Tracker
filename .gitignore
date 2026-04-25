@@ -25,3 +25,4 @@ dist-ssr
 # env for agent
 agent/.env
 agent/__pycache__
+agent/tickets.db
