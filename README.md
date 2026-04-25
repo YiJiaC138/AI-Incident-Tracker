@@ -18,6 +18,8 @@ AI-Incident Tracker is an AI-powered ticket orchestration platform that automate
   - `knowledge_base.txt`: The enterprise routing rules.
   - `test_ai_logic.py`: AI accuracy test suite.
   - `test_db_logic.py`: Raw SQLite test suite.
+- **`docs/`**: Contains project documentation and architecture details.
+- **`presentation/`**: Contains the presentation pitch deck and video.
 
 ---
 
