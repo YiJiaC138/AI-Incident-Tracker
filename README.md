@@ -1,6 +1,7 @@
 # AI-Incident Tracker MVP
 
-🎥 **[Watch the Presentation Pitch Video Here](presentation/PresentationPitch.mp4)**
+🎥 **[Watch the Presentation Pitch Video Here](presentation/PresentationPitch.mp4)**  
+*(Alternate Google Drive Link: [Watch on Google Drive](https://drive.google.com/file/d/1IXF7IEKgUNP-nRn4BcAkM7FQ1Xq98NE3/view?usp=drive_link))*
 
 AI-Incident Tracker is an AI-powered ticket orchestration platform that automates the intake, classification, routing, and escalation of incident reports. It utilizes a React frontend (Vite) and a FastAPI Python backend, powered by the Z.AI GLM LLM as the core reasoning engine.
 
